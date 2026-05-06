@@ -22,7 +22,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');
-    Route::get('/rentals', [RentalController::class, 'index'])->name('rentals.index');
+    
     
     // Profile routes
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
