@@ -24,7 +24,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');
         Route::get('/products', [ProductController::class, 'index'])->name('products.index');
-        Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+       
         Route::get('/rentals', [RentalController::class, 'index'])->name('rentals.index');
     
     // Profile routes
@@ -70,7 +70,7 @@ Route::delete('products/delete-image', [App\Http\Controllers\Admin\ProductContro
 
     // Orders Management
     Route::resource('orders', App\Http\Controllers\Admin\OrderController::class);
-    Route::resource('rentals', App\Http\Controllers\Admin\RentalController::class);
+    
 
 
 
@@ -126,8 +126,7 @@ Route::prefix('reports')->name('reports.')->group(function () {
 
 
     // Logs
-    Route::get('logs', [App\Http\Controllers\Admin\LogController::class, 'index'])
-         ->name('logs.index');
+
     Route::get('logs/{log}', [App\Http\Controllers\Admin\LogController::class, 'show'])
          ->name('logs.show');
 
