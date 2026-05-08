@@ -23,7 +23,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');
     
-    Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+   
     // Profile routes
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -69,6 +69,8 @@ Route::middleware(['auth', 'admin'])
         ->name('rentals.contract');
 
     // Orders (بدون resource لتجنب التضارب مع api)
+        Route::get('orders', [App\Http\Controllers\Admin\OrderController::class, 'index'])
+    ->name('orders.index');
     Route::patch('orders/{order}/status', [App\Http\Controllers\Admin\OrderController::class, 'updateStatus'])
         ->name('orders.update-status');
     Route::post('orders/bulk-update-status', [App\Http\Controllers\Admin\OrderController::class, 'bulkUpdateStatus'])
