@@ -186,7 +186,7 @@ class Product extends Model
     protected static function boot()
     {
         parent::boot();
-
+        
         
         static::retrieved(function ($product) {
             $product->increment('view_count');
