@@ -205,41 +205,46 @@ class ProductImageController extends BaseController
     /**
      * Delete image
      */
-    public function destroy(Request $request, $id)
-    {
-        $image = ProductImage::find($id);
+/**
+ * Delete image
+ */
+public function destroy(Request $request, $id)
+{
+    $image = ProductImage::find($id);
 
-        if (!$image) {
-            return $this->sendError('Image not found');
-        }
+    if (!$image) {
+        return $this->sendError('Image not found');
+    }
 
-        $oldData = $image->toArray();
+    $oldData = $image->toArray();
 
-        // Delete file from storage
-        if ($image->image_url && Storage::disk('public')->exists($image->image_url)) {
+    // Delete file from storage ONLY if it's a local file (not external URL)
+    if ($image->image_url && !filter_var($image->image_url, FILTER_VALIDATE_URL)) {
+        if (Storage::disk('public')->exists($image->image_url)) {
             Storage::disk('public')->delete($image->image_url);
         }
-
-        $image->delete();
-
-        // Log the action
-        LogController::addLog(
-            auth()->id(),
-            'DELETE',
-            'delete_product_image',
-            'products',
-            'product_image',
-            $id,
-            $oldData,
-            null,
-            $request->ip(),
-            $request->userAgent(),
-            'success',
-            'Image #' . $id . ' deleted'
-        );
-
-        return $this->sendResponse(null, 'Image deleted successfully');
     }
+
+    $image->delete();
+
+    // Log the action
+    LogController::addLog(
+        auth()->id(),
+        'DELETE',
+        'delete_product_image',
+        'products',
+        'product_image',
+        $id,
+        $oldData,
+        null,
+        $request->ip(),
+        $request->userAgent(),
+        'success',
+        'Image #' . $id . ' deleted'
+    );
+
+    return $this->sendResponse(null, 'Image deleted successfully');
+}
 
     /**
      * Delete multiple images
@@ -294,4 +299,149 @@ class ProductImageController extends BaseController
             $deletedCount . ' images deleted successfully'
         );
     }
+
+
+
+/**
+ * Add image from URL (external link)
+ */
+/**
+ * Add image from URL (external link) - Updated
+ */
+/**
+ * Add image from URL (external link) - Final version
+ */
+public function addFromUrl(Request $request)
+{
+    $validator = Validator::make($request->all(), [
+        'product_id' => 'required|exists:products,id',
+        'image_url' => 'required|url|max:500',
+        'alt_text' => 'nullable|regex:/^[^<>{}]*$/|string|max:255',
+    ]);
+
+    if ($validator->fails()) {
+        return $this->sendError('Validation Error', $validator->errors(), 422);
+    }
+
+    $productId = $request->product_id;
+    $imageUrl = $request->image_url;
+    
+    // Try to validate if it's an image (more permissive)
+    $isValidImage = false;
+    $contentType = null;
+    
+    // First attempt: try to get headers
+    $headers = @get_headers($imageUrl, 1);
+    if ($headers) {
+        // Get content type
+        if (isset($headers['Content-Type'])) {
+            $contentType = is_array($headers['Content-Type']) ? $headers['Content-Type'][0] : $headers['Content-Type'];
+            
+            // Accept common image types AND application/octet-stream (some servers use this for images)
+            if (strpos($contentType, 'image/') === 0 || $contentType === 'application/octet-stream') {
+                $isValidImage = true;
+            }
+        } else {
+            // If no Content-Type header, assume it might be an image
+            $isValidImage = true;
+        }
+    } else {
+        // If we can't get headers, still accept the URL (might be accessible but headers blocked)
+        $isValidImage = true;
+    }
+    
+    // Create image record with the URL directly
+    $productImage = ProductImage::create([
+        'product_id' => $productId,
+        'image_url' => $imageUrl,
+        'alt_text' => $request->alt_text ?? 'Image from URL',
+    ]);
+
+    // Log the action
+    LogController::addLog(
+        auth()->id(),
+        'CREATE',
+        'add_product_image_from_url',
+        'products',
+        'product_image',
+        $productImage->image_id,
+        null,
+        $productImage->toArray(),
+        $request->ip(),
+        $request->userAgent(),
+        'success',
+        'Image added from URL for product #' . $productId
+    );
+
+    return $this->sendResponse(
+        new ProductImageResource($productImage),
+        'Image added successfully from URL',
+        201
+    );
+}
+
+/**
+ * Add multiple images from URLs
+ */
+/**
+ * Add multiple images from URLs - Simplified version
+ */
+public function addMultipleFromUrls(Request $request)
+{
+    $validator = Validator::make($request->all(), [
+        'product_id' => 'required|exists:products,id',
+        'image_urls' => 'required|array|min:1|max:10',
+        'image_urls.*' => 'required|url|max:500',
+        'alt_texts' => 'nullable|array',
+        'alt_texts.*' => 'nullable|string|max:255',
+    ]);
+
+    if ($validator->fails()) {
+        return $this->sendError('Validation Error', $validator->errors(), 422);
+    }
+
+    $productId = $request->product_id;
+    $uploadedImages = [];
+
+    foreach ($request->image_urls as $index => $imageUrl) {
+        // Get alt text for this image (if provided)
+        $altText = null;
+        if ($request->has('alt_texts') && isset($request->alt_texts[$index])) {
+            $altText = $request->alt_texts[$index];
+        } else {
+            $altText = 'Image from URL ' . ($index + 1);
+        }
+        
+        // Create image record (no validation at all)
+        $productImage = ProductImage::create([
+            'product_id' => $productId,
+            'image_url' => $imageUrl,
+            'alt_text' => $altText,
+        ]);
+        
+        $uploadedImages[] = $productImage;
+    }
+
+    // Log the action
+    LogController::addLog(
+        auth()->id(),
+        'CREATE',
+        'add_multiple_images_from_urls',
+        'products',
+        'product_image',
+        $productId,
+        null,
+        ['uploaded_count' => count($uploadedImages)],
+        $request->ip(),
+        $request->userAgent(),
+        'success',
+        count($uploadedImages) . ' images added from URLs for product #' . $productId
+    );
+
+    return $this->sendResponse(
+        ProductImageResource::collection($uploadedImages),
+        count($uploadedImages) . ' images added successfully from URLs',
+        201
+    );
+} 
 }
