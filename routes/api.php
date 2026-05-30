@@ -118,9 +118,13 @@ Route::prefix('v1')->group(function () {
 
     // Protected routes 
     Route::middleware('auth:sanctum')->group(function () {
-        // Upload images
+        // Upload files
         Route::post('product-images/upload', [ProductImageController::class, 'store']);
         Route::post('product-images/upload-single', [ProductImageController::class, 'uploadSingle']);
+        
+        // Add from URLs (NEW)
+        Route::post('product-images/add-from-url', [ProductImageController::class, 'addFromUrl']);
+        Route::post('product-images/add-multiple-urls', [ProductImageController::class, 'addMultipleFromUrls']);
         
         // Update and delete
         Route::put('product-images/{id}', [ProductImageController::class, 'update']);
