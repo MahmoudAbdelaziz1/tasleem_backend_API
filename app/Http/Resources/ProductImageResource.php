@@ -12,7 +12,14 @@ class ProductImageResource extends JsonResource
         return [
             'image_id' => $this->image_id,
             'product_id' => $this->product_id,
-            'image_url' => $this->image_url ? asset('storage/' . $this->image_url) : null,
+            
+           
+            'image_url' => $this->image_url 
+                ? (preg_match('#^https?://#i', $this->image_url) 
+                    ? $this->image_url                  
+                    : asset('storage/' . $this->image_url))  
+                : null,
+                
             'alt_text' => $this->alt_text,
             'created_at' => $this->created_at ? $this->created_at->format('Y-m-d H:i:s') : null,
             'updated_at' => $this->updated_at ? $this->updated_at->format('Y-m-d H:i:s') : null,
