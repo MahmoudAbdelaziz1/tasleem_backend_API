@@ -13,7 +13,8 @@ class OrderController extends BaseController
 {
     public function index(Request $request)
     {
-        $query = Order::with(['user', 'product', 'payment']);
+        
+        $query = Order::with(['user', 'product.images', 'payment']);
 
         if ($request->has('user_id')) {
             $query->where('user_id', $request->user_id);
@@ -25,7 +26,6 @@ class OrderController extends BaseController
 
         $orders = $query->paginate($request->get('per_page', 15));
 
-    
         LogController::addLog(
             userId: auth()->id(),
             actionType: 'VIEW',
@@ -57,7 +57,6 @@ class OrderController extends BaseController
         ]);
 
         if ($validator->fails()) {
-           
             LogController::addLog(
                 userId: auth()->id() ?? $request->user_id,
                 actionType: 'ERROR',
@@ -84,12 +83,17 @@ class OrderController extends BaseController
             'status' => 'pending',
         ]);
 
-     
         $product = $order->product;
         $product->increment('pay_count', $request->quantity);
         $product->decrement('quantity', $request->quantity);
 
         
+        $product->refresh();
+        if ($product->quantity <= 0 && $product->status !== '0') {
+            $product->status = '0';   // sold out once stock hits zero
+            $product->save();
+        }
+
         LogController::addLog(
             userId: $order->user_id,
             actionType: 'CREATE',
@@ -113,10 +117,10 @@ class OrderController extends BaseController
 
     public function show($id)
     {
-        $order = Order::with(['user', 'product', 'payment'])->find($id);
+       
+        $order = Order::with(['user', 'product.images', 'payment'])->find($id);
 
         if (!$order) {
-           
             LogController::addLog(
                 userId: auth()->id(),
                 actionType: 'ERROR',
@@ -134,7 +138,6 @@ class OrderController extends BaseController
             return $this->sendError('Order not found');
         }
 
-    
         LogController::addLog(
             userId: auth()->id(),
             actionType: 'VIEW',
@@ -210,7 +213,6 @@ class OrderController extends BaseController
             $order->save();
         }
 
-     
         LogController::addLog(
             userId: auth()->id(),
             actionType: 'UPDATE',
@@ -274,7 +276,6 @@ class OrderController extends BaseController
         $oldData = $order->toArray();
         $order->delete();
 
-        
         LogController::addLog(
             userId: auth()->id(),
             actionType: 'DELETE',
