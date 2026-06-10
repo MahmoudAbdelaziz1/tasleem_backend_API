@@ -13,69 +13,78 @@ class ProductController extends BaseController
     /**
      * Display a listing of products
      */
-/**
- * Display a listing of products
- */
-public function index(Request $request)
-{
-    $query = Product::with(['category', 'owner', 'images']);
+    public function index(Request $request)
+    {
+        $query = Product::with(['category', 'owner', 'images']);
 
-  
-    if ($request->has('category_id')) {
-        $query->where('category_id', $request->category_id);
+      
+        if ($request->has('ids')) {
+            
+            $ids = array_values(array_filter(array_map('intval', explode(',', $request->ids))));
+            
+            if (!empty($ids)) {
+                $query->whereIn('id', $ids);
+           
+                $products = $query->paginate(count($ids)); 
+                
+                return $this->sendPaginated(
+                    $products,
+                    ProductResource::collection($products),
+                    'Products retrieved successfully'
+                );
+            }
+        }
+        // ==========================================
+
+        if ($request->has('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+
+        if ($request->has('owner_id')) {
+            $query->where('owner_id', $request->owner_id);
+        }
+
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+        
+        if ($request->has('type')) {
+            $query->where('type', $request->type);
+        }
+     
+        if ($request->has('search')) {
+            $query->where('name', 'LIKE', "%{$request->search}%");
+        }
+      
+        if ($request->has('min_price')) {
+            $query->where('price', '>=', $request->min_price);
+        }
+        if ($request->has('max_price')) {
+            $query->where('price', '<=', $request->max_price);
+        }
+
+        $allowedSortFields = ['id', 'name', 'price', 'created_at', 'updated_at', 'view_count', 'rate', 'pay_count', 'addingToCart_count', 'quantity'];
+        
+        $sortField = $request->get('sort_by', 'created_at');
+       
+        if (!in_array($sortField, $allowedSortFields)) {
+            $sortField = 'created_at';
+        }
+        
+        $sortOrder = $request->get('sort_order', 'desc');
+      
+        $sortOrder = in_array(strtolower($sortOrder), ['asc', 'desc']) ? strtolower($sortOrder) : 'desc';
+        
+        $query->orderBy($sortField, $sortOrder);
+
+        $products = $query->paginate($request->get('per_page', 15));
+
+        return $this->sendPaginated(
+            $products,
+            ProductResource::collection($products),
+            'Products retrieved successfully'
+        );
     }
-
-
-    if ($request->has('owner_id')) {
-        $query->where('owner_id', $request->owner_id);
-    }
-
-
-    if ($request->has('status')) {
-        $query->where('status', $request->status);
-    }
-
-    
-    if ($request->has('type')) {
-        $query->where('type', $request->type);
-    }
-
- 
-    if ($request->has('search')) {
-        $query->where('name', 'LIKE', "%{$request->search}%");
-    }
-
-  
-    if ($request->has('min_price')) {
-        $query->where('price', '>=', $request->min_price);
-    }
-    if ($request->has('max_price')) {
-        $query->where('price', '<=', $request->max_price);
-    }
-
-    
-    $allowedSortFields = ['id', 'name', 'price', 'created_at', 'updated_at', 'view_count', 'rate', 'pay_count', 'addingToCart_count', 'quantity'];
-    
-    $sortField = $request->get('sort_by', 'created_at');
-   
-    if (!in_array($sortField, $allowedSortFields)) {
-        $sortField = 'created_at';
-    }
-    
-    $sortOrder = $request->get('sort_order', 'desc');
-  
-    $sortOrder = in_array(strtolower($sortOrder), ['asc', 'desc']) ? strtolower($sortOrder) : 'desc';
-    
-    $query->orderBy($sortField, $sortOrder);
-
-    $products = $query->paginate($request->get('per_page', 15));
-
-    return $this->sendPaginated(
-        $products,
-        ProductResource::collection($products),
-        'Products retrieved successfully'
-    );
-}
 
     /**
      * Store a newly created product
@@ -99,7 +108,6 @@ public function index(Request $request)
 
         $product = Product::create($request->all());
 
-      
         \App\Models\Log::create([
             'user_id' => auth()->id(),
             'action_type' => 'CREATE',
