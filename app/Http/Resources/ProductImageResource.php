@@ -13,13 +13,13 @@ class ProductImageResource extends JsonResource
         $finalUrl = null;
 
         if ($rawUrl) {
-           
-            if (preg_match('#/storage/(https?://.*)#i', $rawUrl, $matches)) {
-                $rawUrl = $matches[1];    
+  
+            if (preg_match('#(https?://.+)#i', $rawUrl, $matches)) {
+                $rawUrl = $matches[1]; 
             }
 
             if (filter_var($rawUrl, FILTER_VALIDATE_URL)) {
-                $finalUrl = $rawUrl;  
+                $finalUrl = $rawUrl; 
             } else {
                 $finalUrl = asset('storage/' . $rawUrl);   
             }
