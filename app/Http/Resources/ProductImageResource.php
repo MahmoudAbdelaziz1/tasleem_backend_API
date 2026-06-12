@@ -9,19 +9,23 @@ class ProductImageResource extends JsonResource
 {
     public function toArray($request)
     {
-        $rawUrl = $this->image_url ? trim($this->image_url) : null;
+       
+        $rawUrl = $this->getAttributes()['image_url'] ?? null;
+        $rawUrl = $rawUrl ? trim($rawUrl) : null;
         $finalUrl = null;
 
         if ($rawUrl) {
-  
-            if (preg_match('#(https?://.+)#i', $rawUrl, $matches)) {
-                $rawUrl = $matches[1]; 
+            
+            if (str_starts_with($rawUrl, 'http://') || str_starts_with($rawUrl, 'https://')) {
+                $finalUrl = $rawUrl;
             }
-
-            if (filter_var($rawUrl, FILTER_VALIDATE_URL)) {
-                $finalUrl = $rawUrl; 
-            } else {
-                $finalUrl = asset('storage/' . $rawUrl);   
+          
+            elseif (preg_match('#(https?://[^\s<<>"{}|\\^`\[\]]+)#i', $rawUrl, $matches)) {
+                $finalUrl = $matches[1];
+            }
+           
+            else {
+                $finalUrl = asset('storage/' . ltrim($rawUrl, '/'));
             }
         }
 
